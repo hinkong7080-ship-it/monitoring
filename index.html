@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unified Global Resource Monitor - Master V133.00</title>
+    <!-- [External Libraries - Protected Version] -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/topojson-client@3"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@300;400;700;800&family=Noto+Sans+KR:wght@300;500;700&family=JetBrains+Mono:wght@300;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- [SECTION 1: GLOBAL UI THEME] --- */
+        :root {
+            --neon-yellow: #ffeb3b; --neon-red: #ff2d55; --neon-cyan: #00e5ff;
+            --korea-blue: #2979ff; --china-grey: #aaaaaa; --vessel-green: #00ff88;
+            --war-red: #ff0000; --custom-bg: #060c18; --panel-bg: rgba(6, 14, 28, 0.93);
+            --report-dark-bg: #050c18; --private-orange: #f97316; --kogas-blue: #2563eb;
+
+            /* --- 반응형 레이아웃 변수 --- */
+            --ui-margin: clamp(16px, 2.5vw, 40px);
+            --nav-width: clamp(240px, 23vw, 440px);
+            --controls-width: clamp(180px, 17vw, 320px);
+            --nav-gap: clamp(6px, 0.63vw, 12px);
+            --btn-padding: clamp(8px, 0.73vw, 14px);
+            --btn-font: clamp(10px, 0.73vw, 14px);
+            --nav-bottom-offset: clamp(110px, 17vh, 185px);
+            --panel-padding: clamp(14px, 1.6vw, 30px);
+            --ribbon-height: clamp(60px, 6.5vh, 100px);
+            --info-label-font: clamp(9px, 0.68vw, 13px);
+            --info-value-font: clamp(13px, 1.15vw, 22px);
+            --list-title-font: clamp(14px, 1.35vw, 26px);
+            --list-item-font: clamp(10px, 0.78vw, 15px);
+            --controls-font: clamp(13px, 1.1vw, 21px);
+            --controls-padding: clamp(12px, 1.15vw, 22px) clamp(14px, 1.46vw, 28px);
+            --close-font: clamp(28px, 2.6vw, 50px);
+        }
+        body {
+            margin: 0; padding: 0; overflow: hidden; background-color: var(--custom-bg);
+            background-image: linear-gradient(rgba(20, 90, 130, 0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(20, 90, 130, 0.07) 1px, transparent 1px);
+            background-size: 50px 50px; font-family: 'Urbanist', 'Noto Sans KR', sans-serif; color: #ffffff; user-select: none;
+        }
+
+        #bottom-bar { position: absolute; bottom: var(--ui-margin); left: var(--ui-margin); right: var(--ui-margin); display: flex; flex-wrap: wrap; align-items: flex-end; z-index: 9999; pointer-events: none; }
+        #bottom-bar.wrapped { justify-content: center; gap: var(--nav-gap); }
+        #main-nav-container { display: flex; flex-direction: column; gap: var(--nav-gap); pointer-events: auto; }
+        .tab-group { display: grid; grid-template-columns: 1fr 1fr; gap: var(--nav-gap); width: var(--nav-width); }
+        .switch-btn {
+            background: rgba(0, 0, 0, 0.85); border: 2.5px solid var(--neon-cyan); color: var(--neon-cyan);
+            padding: var(--btn-padding) 0; border-radius: 4px; cursor: pointer; font-weight: 800; font-size: var(--btn-font);
+            text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s ease; backdrop-filter: blur(15px); text-align: center;
+        }
+        .switch-btn:hover { background: rgba(0, 229, 255, 0.2); transform: translateY(-2px); }
+        .switch-btn.active { background: var(--neon-cyan); color: #000; box-shadow: 0 0 25px rgba(0, 229, 255, 0.6); }
+
+        /* [좌측 상세 정보 패널] */
+        #left-list-panel {
+            position: absolute; left: var(--ui-margin); bottom: var(--nav-bottom-offset);
+            height: auto; max-height: calc(100vh - 45vh); width: var(--nav-width); box-sizing: border-box;
+            background: var(--panel-bg); border: 1.5px solid var(--neon-cyan);
+            border-radius: 4px; padding: var(--panel-padding); opacity: 0; visibility: hidden;
+            transition: 0.4s cubic-bezier(0.16, 1, 0.3, 1); z-index: 500; backdrop-filter: blur(35px);
+            display: flex; flex-direction: column; box-shadow: 0 0 50px rgba(0, 229, 255, 0.2);
+        }
+        #left-list-panel.active { opacity: 1; visibility: visible; }
+        .list-title { font-weight: 800; font-size: var(--list-title-font); color: var(--neon-cyan); margin-bottom: clamp(10px, 1vw, 20px); border-bottom: 1px solid rgba(0,229,255,0.3); padding-bottom: clamp(6px, 0.63vw, 12px); text-transform: uppercase; }
+        .list-content { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(5px, 0.52vw, 10px); overflow-y: auto; flex-grow: 1; padding-right: clamp(6px, 0.78vw, 15px); }
+        .list-content::-webkit-scrollbar { width: 4px; }
+        .list-content::-webkit-scrollbar-thumb { background: var(--neon-cyan); border-radius: 2px; }
+        .list-item { font-size: var(--list-item-font); color: rgba(255, 255, 255, 0.95); line-height: 1.6; display: flex; align-items: flex-start; }
+        .list-item::before { content: '• '; color: var(--neon-cyan); margin-right: 8px; flex-shrink: 0; }
+
+        /* [Header KPI Ribbon] */
+        #header-main-title { position: absolute; top: var(--ui-margin); left: var(--ui-margin); right: var(--ui-margin); z-index: 1800; display: flex; align-items: center; pointer-events: none; }
+        #header-main-title .text-group { font-weight: 700; font-size: clamp(1.1rem, 2.2vw, 3.2rem); letter-spacing: -1px; margin-right: 3vw; line-height: 1.05; }
+        .accent-text { color: var(--neon-cyan); text-shadow: 0 0 20px rgba(0, 229, 255, 0.5); }
+        .header-info-ribbon { display: flex; align-items: center; justify-content: space-around; flex-grow: 1; border-left: 4.5px solid rgba(255, 255, 255, 0.15); padding-left: 1.5vw; height: var(--ribbon-height); pointer-events: auto; }
+        .info-tag { display: flex; flex-direction: column; gap: 4px; flex: 1; padding-left: 2vw; position: relative; cursor: help; transition: 0.3s; }
+        .info-tag:hover { background: rgba(0, 229, 255, 0.05); }
+        .info-tag:not(:last-child)::after { content: ''; position: absolute; right: 0; top: 10%; height: 80%; width: 1.5px; background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.25), transparent); }
+        .info-label { font-size: var(--info-label-font); letter-spacing: 2px; text-transform: uppercase; color: var(--neon-cyan); font-weight: 500; }
+        .info-value { font-size: var(--info-value-font); font-weight: 700; font-family: 'JetBrains Mono'; }
+
+        /* [Report Overlay Shell - Neon Dark] */
+        #report-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--report-dark-bg); z-index: 2000; display: none; overflow-y: auto; color: #ffffff; }
+        #report-overlay.active { display: block; }
+        .close-report { position: absolute; top: clamp(16px, 1.56vw, 30px); right: clamp(20px, 2.6vw, 50px); font-size: var(--close-font); color: var(--neon-cyan); cursor: pointer; z-index: 2100; transition: 0.3s; font-weight: 200; }
+        .rep-container { max-width: 1400px; margin: 0 auto; padding: clamp(50px, 7vh, 100px) clamp(20px, 4vw, 60px); }
+        .rep-main-header { font-size: clamp(22px, 2.2vw, 42px); font-weight: 900; color: #ffffff; margin-bottom: 12px; letter-spacing: -1px; }
+        .rep-sub-header { font-size: clamp(12px, 1vw, 19px); color: rgba(255,255,255,0.6); margin-bottom: clamp(20px, 2.1vw, 40px); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: clamp(15px, 1.56vw, 30px); line-height: 1.6; }
+        .rep-section-h3 { font-size: clamp(14px, 1.35vw, 26px); font-weight: 800; color: var(--neon-cyan); margin-top: clamp(30px, 3.1vw, 60px); margin-bottom: clamp(15px, 1.56vw, 30px); border-left: 6px solid var(--neon-cyan); padding-left: clamp(10px, 1.04vw, 20px); }
+
+        .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(10px, 1.04vw, 20px); margin-bottom: clamp(20px, 2.1vw, 40px); }
+        .summary-card { background: rgba(255,255,255,0.03); padding: clamp(14px, 1.56vw, 30px); border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); backdrop-filter: blur(10px); }
+        .summary-label { font-size: clamp(10px, 0.78vw, 15px); font-weight: 600; color: var(--neon-cyan); display: block; margin-bottom: 8px; text-transform: uppercase; }
+        .summary-value { font-size: clamp(16px, 1.56vw, 30px); font-weight: 800; }
+        .trend-up { color: var(--vessel-green); font-size: clamp(10px, 0.83vw, 16px); margin-left: 8px; font-weight: 700; }
+
+        .analysis-card { background: rgba(0, 25, 45, 0.5); border-radius: 20px; padding: clamp(20px, 2.1vw, 40px); border: 1px solid rgba(0, 229, 255, 0.15); margin-bottom: clamp(20px, 2.1vw, 40px); }
+        .p-track { width: 100%; height: clamp(20px, 1.88vw, 36px); background: rgba(255,255,255,0.05); border-radius: 8px; overflow: hidden; margin-top: 15px; border: 1px solid rgba(255,255,255,0.1); }
+        .p-fill-kogas { height: 100%; background: linear-gradient(90deg, #1e40af, var(--kogas-blue)); width: 74%; }
+        .p-fill-private { height: 100%; background: linear-gradient(90deg, #c2410c, var(--private-orange)); width: 26%; }
+
+        .rep-table { width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: clamp(20px, 2.1vw, 40px); font-size: clamp(10px, 0.78vw, 15px); border-radius: 12px; overflow: hidden; }
+        .rep-table th { text-align: left; padding: clamp(10px, 1.04vw, 20px); background: rgba(255,255,255,0.05); color: var(--neon-cyan); border-bottom: 1px solid rgba(255,255,255,0.1); font-weight: 800; }
+        .rep-table td { padding: clamp(10px, 1.04vw, 20px); border-bottom: 1px solid rgba(255,255,255,0.03); color: rgba(255,255,255,0.9); }
+
+        .minerals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(clamp(180px, 16.7vw, 320px), 1fr)); gap: clamp(10px, 1.04vw, 20px); margin-top: clamp(20px, 2.1vw, 40px); }
+        .min-card { background: rgba(255,255,255,0.03); border-radius: 16px; padding: clamp(14px, 1.56vw, 30px); border: 1px solid rgba(255,255,255,0.08); position: relative; transition: 0.3s; }
+        .min-card:hover { border-color: var(--neon-cyan); transform: translateY(-5px); }
+        .min-dep-badge { font-size: clamp(9px, 0.63vw, 12px); font-weight: 800; padding: 5px 12px; border-radius: 4px; position: absolute; top: clamp(12px, 1.3vw, 25px); right: clamp(12px, 1.3vw, 25px); background: var(--war-red); color: #fff; box-shadow: 0 0 15px rgba(255, 45, 85, 0.5); }
+
+        #ui-overlay { margin-left: auto; text-align: right; pointer-events: none; }
+        .controls { background: var(--panel-bg); padding: var(--controls-padding); border-radius: 4px; width: var(--controls-width); box-sizing: border-box; border: 1px solid rgba(0, 229, 255, 0.15); pointer-events: auto; backdrop-filter: blur(10px); margin-left: auto; }
+        .corp-brand { font-size: var(--controls-font); font-weight: 800; border-bottom: 1.5px solid rgba(255, 255, 255, 0.15); padding-bottom: clamp(6px, 0.63vw, 12px); margin-bottom: clamp(8px, 0.78vw, 15px); letter-spacing: 1px; }
+        .controls span { font-size: clamp(10px, 0.73vw, 14px); }
+        input[type=number], input[type=range] { pointer-events: auto; accent-color: var(--neon-cyan); cursor: pointer; }
+
+        .distance-badge { position: absolute; background: rgba(0, 0, 0, 0.95); padding: clamp(5px, 0.42vw, 8px) clamp(8px, 0.83vw, 16px); border-radius: 4px; font-size: clamp(10px, 0.83vw, 16px); color: var(--neon-yellow); border: 1.5px solid var(--neon-yellow); transform: translate(-50%, -100%); pointer-events: none; opacity: 0; visibility: hidden; transition: 0.3s; z-index: 205; font-weight: 800; backdrop-filter: blur(10px); }
+        .distance-badge.active { opacity: 1; visibility: visible; }
+        #loader { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 8000; letter-spacing: clamp(4px, 0.52vw, 10px); font-size: clamp(10px, 0.83vw, 16px); color: var(--neon-cyan); font-weight: 200; }
+    </style>
+</head>
+<body>
+
+    <div id="loader">V133.00 FINAL GOLDEN MASTER BOOTING...</div>
+    
+    <div id="header-main-title">
+        <div class="text-group" id="main-title-text"><div>GLOBAL <span class="accent-text">LNG</span></div><div>MONITORING</div></div>
+        <div id="dynamic-ribbon" class="header-info-ribbon"></div>
+    </div>
+
+    <div id="left-list-panel"><div id="list-title" class="list-title">Resource Inventory</div><div id="list-content" class="list-content"></div></div>
+    <div id="report-overlay"><div class="close-report" onclick="window.toggleReport(null)">×</div><div id="report-content"></div></div>
+    <div id="distanceBadge" class="distance-badge"></div>
+
+    <div id="bottom-bar">
+        <div id="main-nav-container">
+            <div class="tab-group">
+                <button id="btn-lng" class="switch-btn active" onclick="window.setMode('LNG')">LNG Monitor</button>
+                <button id="btn-minerals" class="switch-btn" onclick="window.setMode('MINERALS')">Minerals Monitor</button>
+            </div>
+            <button class="switch-btn" onclick="window.toggleReport(window.currentMode)" style="border-color: rgba(0,229,255,0.4); font-size: 13px; width:100%; margin-top:10px;">Strategic Analysis Report</button>
+        </div>
+        <div id="ui-overlay">
+            <div class="controls">
+                <div class="corp-brand">ILDAE GIUP Corp</div>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;"><span>자동 전환 (분)</span><input type="number" id="loopIntervalInput" value="5" min="1" max="60"></div>
+                <div style="display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px; margin-bottom:15px;"><span style="white-space:nowrap; flex-shrink:0;">자전 속도</span><input type="range" id="rotationSpeedSlider" min="0" max="0.01" step="0.0001" value="0.0006" style="flex:1; min-width:70px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * --- [SECTION 2: GLOBAL CORE & UTILITIES - 제1원칙: 수정 불가 박제] ---
+         */
+        const CORE_RADIUS = 126, MARKER_RADIUS = 135.2, VESSEL_RADIUS = 136.5, MAP_RADIUS = 133.5, GRID_RADIUS = 129, ARC_BASE_RADIUS = 135.2;
+        const KOREA_LAT = 36.5, KOREA_LON = 127.8, CHINA_LAT = 35.0, CHINA_LON = 105.0;
+
+        window.wps = { hormuz: [26, 56.5], malacca: [1.3, 103.5], panama: [9, -79], bering: [66, -169], singapore: [1.2, 103.8], sChinaSea: [15, 115], babElMandeb: [12.6, 43.4] };
+
+        window.latLonToVector3 = (lat, lon, r) => {
+            const phi = (90 - lat) * (Math.PI / 180), theta = (lon + 180) * (Math.PI / 180);
+            return new THREE.Vector3(-r * Math.sin(phi) * Math.cos(theta), r * Math.cos(phi), r * Math.sin(phi) * Math.sin(theta));
+        };
+        window.GreatCircleInterpolation = (p1, p2, t) => {
+            const angle = p1.angleTo(p2); if (angle < 0.0001) return p1.clone();
+            const sinTotal = Math.sin(angle);
+            return new THREE.Vector3().addScaledVector(p1, Math.sin((1-t)*angle)/sinTotal).addScaledVector(p2, Math.sin(t*angle)/sinTotal).setLength(p1.length());
+        };
+        window.calculateDist = (p1, p2) => {
+            const dLat = (p2.lat - p1.lat) * Math.PI / 180, dLon = (p2.lon - p1.lon) * Math.PI / 180;
+            const a = Math.sin(dLat/2)**2 + Math.cos(p1.lat*Math.PI/180)*Math.cos(p2.lat*Math.PI/180)*Math.sin(dLon/2)**2;
+            return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        };
+        window.createGlowTexture = (color) => {
+            const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128;
+            const ctx = canvas.getContext('2d'); const grad = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+            grad.addColorStop(0, color); grad.addColorStop(0.3, color); grad.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = grad; ctx.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(canvas);
+        };
+
+        window.KOREA_POS = window.latLonToVector3(KOREA_LAT, KOREA_LON, MARKER_RADIUS);
+        window.CHINA_POS = window.latLonToVector3(CHINA_LAT, CHINA_LON, MARKER_RADIUS);
+
+        /**
+         * --- [SECTION 3: 100% COMPLETE DATASETS (제1원칙: 누락 불가 박제)] ---
+         */
+        window.LNG_DATA_MASTER = [
+            { name: "카타르 노스 필드", lat: 26.5, lon: 51.5, info: "도입량: 888만 톤" },
+            { name: "오만 Qalhat LNG", lat: 22.7, lon: 59.4, info: "도입량: 472만 톤" },
+            { name: "UAE Das Island", lat: 25.1, lon: 52.9, info: "도입량: 210만 톤" },
+            { name: "호주 Gorgon LNG", lat: -20.8, lon: 115.4, info: "도입량: 1,140만 톤" },
+            { name: "호주 Prelude FLNG", lat: -13.8, lon: 123.3, info: "도입량: 360만 톤" },
+            { name: "호주 NWS Shelf", lat: -20.6, lon: 116.8, info: "도입량: 650만 톤" },
+            { name: "말레이시아 빈툴루", lat: 3.3, lon: 121.1, info: "도입량: 613만 톤" },
+            { name: "인도네시아 Tangguh", lat: -2.3, lon: 133.1, info: "도입량: 380만 톤" },
+            { name: "인도네시아 Bontang", lat: 0.1, lon: 117.5, info: "도입량: 290만 톤" },
+            { name: "PNG Port Moresby", lat: -9.3, lon: 147.2, info: "도입량: 310만 톤" },
+            { name: "브루나이 Lumut", lat: 4.7, lon: 114.4, info: "도입량: 250만 톤" },
+            { name: "미국 Sabine Pass", lat: 29.7, lon: -93.9, info: "도입량: 563만 톤" },
+            { name: "미국 Freeport LNG", lat: 28.9, lon: -95.3, info: "도입량: 480만 톤" },
+            { name: "미국 Corpus Christi", lat: 27.8, lon: -97.2, info: "도입량: 420만 톤" },
+            { name: "나이지리아 보니섬", lat: 4.4, lon: 7.2, info: "도입량: 240만 톤" },
+            { name: "알제리 Arzew LNG", lat: 35.8, lon: -0.3, info: "도입량: 195만 톤" },
+            { name: "트리니다드 Atlantic", lat: 10.2, lon: -61.6, info: "도입량: 180만 톤" },
+            { name: "러시아 Yamal LNG", lat: 71.3, lon: 72.1, info: "도입량: 185만 톤" },
+            { name: "러시아 Sakhalin-2", lat: 46.6, lon: 142.9, info: "도입량: 320만 톤" }
+        ];
+
+        window.MINERALS_MASTER_DATA = [
+            { type: 'strategic', name: "Lithium (AU)", lat: -33.8, lon: 116.0, refinedInChina: true, info: "의존도 65% | 호주 채굴 → 중국 정제" },
+            { type: 'strategic', name: "Lithium (CL)", lat: -23.5, lon: -68.3, refinedInChina: true, info: "칠레 리튬염 → 중국 가공 점유 90%" },
+            { type: 'strategic', name: "Nickel (ID)", lat: 0.5, lon: 127.9, refinedInChina: true, info: "인도네시아 니켈 제련소 중국 운영" },
+            { type: 'strategic', name: "Nickel (RU)", lat: 69.3, lon: 88.2, refinedInChina: false, info: "비중국 공급망 최후 보루 (Norilsk)" },
+            { type: 'strategic', name: "Cobalt (CD)", lat: -10.6, lon: 26.1, refinedInChina: true, info: "의존도 60%↑ | 가공 중국 점유 80%" },
+            { type: 'strategic', name: "Manganese (ZA)", lat: -27.2, lon: 23.0, refinedInChina: true, info: "이차전지 필수재 | 중국 정제 경유" },
+            { type: 'strategic', name: "Graphite (CN)", lat: 45.8, lon: 126.7, refinedInChina: true, info: "음극재 핵심 천연흑연 글로벌 독점" },
+            { type: 'strategic', name: "REE-Nd (CN)", lat: 41.7, lon: 109.9, refinedInChina: true, info: "EV 영구자석 핵심 원료 Nd/Pr" },
+            { type: 'strategic', name: "REE-Dy (CN)", lat: 25.8, lon: 114.9, refinedInChina: true, info: "중희토류 고온 자석 필수 소재" },
+            { type: 'strategic', name: "REE-Tb (AU)", lat: -28.8, lon: 122.2, refinedInChina: true, info: "터븀 채굴 후 중국 내 분리 의존" },
+            { type: 'security', name: "Tungsten (상동, KR)", lat: 37.15, lon: 128.8, refinedInChina: false, info: "세계 최대 텅스텐 매장지 상동" },
+            { type: 'security', name: "Copper (CL)", lat: -24.3, lon: -69.1, refinedInChina: true, info: "전력망 핵심 소재 | 중국 제련" },
+            { type: 'security', name: "Silicon (CN)", lat: 25.0, lon: 102.7, refinedInChina: true, info: "반도체 및 태양광 기초 소재 공급" },
+            { type: 'security', name: "Gallium (CN)", lat: 23.1, lon: 113.2, refinedInChina: true, info: "반도체 수출 통제 핵심 품목" },
+            { type: 'security', name: "Indium (KR)", lat: 35.45, lon: 129.35, refinedInChina: false, info: "한국 부산물 정련 소재 허브" },
+            { type: 'security', name: "Germanium (CN)", lat: 36.1, lon: 103.8, refinedInChina: true, info: "광섬유 및 국방 센서 필수" },
+            { type: 'security', name: "Bismuth (VN)", lat: 21.6, lon: 105.5, refinedInChina: true, info: "의존도 100% 위험 품목" },
+            { type: 'security', name: "Tin (ID)", lat: -2.2, lon: 106.1, refinedInChina: true, info: "반도체 회로 납땜 필수" },
+            { type: 'security', name: "Magnesium (CN)", lat: 34.3, lon: 108.9, refinedInChina: true, info: "자동차 경량화 독점 공급망" },
+            { type: 'security', name: "Titanium (RU)", lat: 58.0, lon: 60.5, refinedInChina: false, info: "항공우주 고정밀 부품용" },
+            { type: 'security', name: "Aluminum (GN)", lat: 11.1, lon: -14.6, refinedInChina: true, info: "기니 보크사이트 → 중국 정련" },
+            { type: 'security', name: "Vanadium (CN)", lat: 26.6, lon: 101.7, refinedInChina: true, info: "ESS 배터리 전해질 핵심" },
+            { type: 'security', name: "Molybdenum (US)", lat: 39.4, lon: -106.2, refinedInChina: false, info: "항공우주 고강도 합금" },
+            { type: 'security', name: "Chromium (KZ)", lat: 50.3, lon: 58.4, refinedInChina: true, info: "중국 TCR 철도 경유 수입" },
+            { type: 'security', name: "Niobium (BR)", lat: -19.6, lon: -46.9, refinedInChina: false, info: "초전도체 및 특수 합금" },
+            { type: 'security', name: "Zirconium (AU)", lat: -31.9, lon: 115.8, refinedInChina: true, info: "원자력용 부품 제련 의존" },
+            { type: 'security', name: "Platinum (ZA)", lat: -25.2, lon: 27.2, refinedInChina: false, info: "수소차 촉매 수급 품목" },
+            { type: 'security', name: "Palladium (RU)", lat: 69.4, lon: 88.3, refinedInChina: false, info: "배기가스 정화 촉매 공급" },
+            { type: 'security', name: "Tantalum (BR)", lat: -0.8, lon: -60.1, refinedInChina: false, info: "IT용 소형 커패시터 원료" },
+            { type: 'security', name: "Selenium (CA)", lat: 51.2, lon: -102.4, refinedInChina: false, info: "태양전지 특수 첨가제" },
+            { type: 'security', name: "Antimony (CN)", lat: 28.1, lon: 112.9, refinedInChina: true, info: "방산 전략 금속 및 난연제" },
+            { type: 'security', name: "Lead (US)", lat: 68.1, lon: -162.9, refinedInChina: false, info: "철강 부식 방지 및 차폐용" },
+            { type: 'security', name: "Zinc (AU)", lat: -31.8, lon: 141.4, refinedInChina: false, info: "전통적 비철금속 주요 생산" }
+        ];
+
+        window.STRATEGIC_LIST = ["리튬", "니켈", "코발트", "망간", "흑연", "네오디뮴", "디스프로슘", "테르븀", "세륨", "란타넘"];
+        window.SECURITY_LIST = ["구리", "실리콘", "마그네슘", "알루미늄", "텅스텐", "갈륨", "게르마늄", "비스무트", "인듐", "주석", "몰리브데넘", "티타늄", "바나듐", "크롬", "나이오븀", "지르코늄", "백금", "팔라듐", "탄탈럼", "셀레늄", "안티모니", "납", "아연"];
+
+        window.VESSEL_DATA = [
+            { name: "LNGC K. Jasmine", route: [[26.5, 51.5], window.wps.hormuz, [5, 80], window.wps.malacca, [15, 115], [KOREA_LAT, KOREA_LON]] },
+            { name: "SK Summit", route: [[-20.8, 115.4], [-5, 125], [15, 120], [KOREA_LAT, KOREA_LON]] },
+            { name: "Hyundai Utopia", route: [[26.5, 51.5], window.wps.hormuz, window.wps.malacca, [15, 115], [KOREA_LAT, KOREA_LON]] },
+            { name: "Boris Vilkitsky", route: [[71.3, 72.1], window.wps.bering, [45, 150], [KOREA_LAT, KOREA_LON]] },
+            { name: "Global Energy", route: [[29.7, -93.9], window.wps.panama, [15, -120], [25, 160], [KOREA_LAT, KOREA_LON]] }
+        ];
+
+        /**
+         * --- [SECTION 4: UI ENGINE & 100% REPORT RESTORATION] ---
+         */
+        window.scene = null; window.camera = null; window.renderer = null; window.globe = null;
+        window.pins = []; window.vesselGroups = []; window.connectionLines = [];
+        window.isDragging = false; window.autoRotate = true; window.currentMode = 'LNG';
+        window.rotationSpeed = 0.0006; window.clickedTarget = null; window.hoveredTarget = null; window.previousPos = {x:0, y:0};
+
+        window.setMode = (mode) => {
+            if (window.activeReport) window.toggleReport(null);
+            if (window.currentMode === mode) return; window.currentMode = mode;
+            document.querySelectorAll('.switch-btn').forEach(b => b.classList.remove('active'));
+            const btn = document.getElementById(`btn-${mode.toLowerCase()}`); if(btn) btn.classList.add('active');
+            window.clearArcs(); window.renderCurrentMode(); window.clickedTarget = null;
+            const lp = document.getElementById('left-list-panel'); if(lp) lp.classList.remove('active');
+        };
+
+        window.showLeftList = (type) => {
+            const panel = document.getElementById('left-list-panel'), title = document.getElementById('list-title'), content = document.getElementById('list-content');
+            if(!panel || !title || !content) return;
+            if (type === 'lng-stats') {
+                title.innerText = "LNG Import Metrics";
+                content.innerHTML = `<div class="list-item">IMPORT RANK: TOP 3</div><div class="list-item">ANNUAL GOAL: 46.4M TONNES</div><div class="list-item">PROVIDERS: QATAR/AUS/USA</div><div class="list-item" style="color:var(--neon-yellow)">PRIVATE SHARE: 26%↑</div>`;
+            } else {
+                title.innerText = type === 'strategic' ? "10대 전략 핵심광물" : "23종 경제 안보 품목";
+                const items = type === 'strategic' ? window.STRATEGIC_LIST : window.SECURITY_LIST;
+                content.innerHTML = items.map(n => `<div class="list-item">${n}</div>`).join('');
+            }
+            panel.classList.add('active');
+        };
+
+        window.hideLeftList = () => { if(!window.clickedTarget) { const lp = document.getElementById('left-list-panel'); if(lp) lp.classList.remove('active'); } };
+
+        window.updateLeftPanel = (data) => {
+            const panel = document.getElementById('left-list-panel'), content = document.getElementById('list-content'), title = document.getElementById('list-title');
+            if(!panel || !title || !content) return;
+            title.innerText = "Detailed Analysis";
+            content.innerHTML = `<div class="list-item" style="color:var(--neon-cyan); grid-column:1/-1; font-weight:800; border-bottom:1px solid rgba(0,229,255,0.2); padding-bottom:12px; font-size:22px;">${data.name}</div><div class="list-item" style="grid-column:1/-1; font-size:18px; margin-top:10px; line-height:1.6;">${data.info}</div><div class="list-item" style="grid-column:1/-1; color:var(--neon-yellow); font-size:13px; margin-top:12px; font-family:'JetBrains Mono'; uppercase">SECURED ACCESS: GRANTED</div>`;
+            panel.classList.add('active');
+        };
+
+        window.clearArcs = () => { window.connectionLines.forEach(l => window.globe.remove(l)); window.connectionLines = []; if(window.chinaHubMarker) window.chinaHubMarker.visible = false; };
+
+        window.createArc = (startPos, endPos, color, opacity = 0.8) => {
+            const ptsCount = 100; const p1 = startPos.clone().normalize().multiplyScalar(ARC_BASE_RADIUS); const p2 = endPos.clone().normalize().multiplyScalar(ARC_BASE_RADIUS);
+            const angle = p1.angleTo(p2); if (angle < 0.001) return;
+            const positions = new Float32Array(ptsCount * 3);
+            for (let i = 0; i < ptsCount; i++) {
+                const t = i / (ptsCount - 1); const v = window.GreatCircleInterpolation(p1, p2, t);
+                const h = Math.sin(t * Math.PI) * (angle * 12); v.normalize().multiplyScalar(ARC_BASE_RADIUS + h);
+                positions[i*3]=v.x; positions[i*3+1]=v.y; positions[i*3+2]=v.z;
+            }
+            const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color, transparent: true, opacity }));
+            window.globe.add(line); window.connectionLines.push(line);
+        };
+
+        window.toggleReport = (type) => {
+            const overlay = document.getElementById('report-overlay'), content = document.getElementById('report-content');
+            const uiOverlay = document.getElementById('ui-overlay');
+            if (!type || window.activeReport === type) { overlay.classList.remove('active'); window.activeReport = null; window.autoRotate = true; if (uiOverlay) uiOverlay.style.display = ''; }
+            else {
+                overlay.classList.add('active'); window.activeReport = type; window.autoRotate = false; if (uiOverlay) uiOverlay.style.display = 'none';
+                if (type === 'LNG') {
+                    content.innerHTML = `
+                        <div class="rep-container">
+                            <header style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.15); padding-bottom:20px; margin-bottom:40px;">
+                                <div style="display:flex; align-items:center; gap:12px;"><span style="font-size:32px;">🚢</span><h2 style="font-size:34px; font-weight:900;">2025 LNG Market Intelligence Report</h2></div>
+                                <span style="font-size:15px; font-weight:600; color:var(--neon-cyan); background:rgba(0,229,255,0.1); padding:8px 16px; border-radius:30px; border:1px solid var(--neon-cyan);">FINAL SETTLEMENT: 2026.01.29</span>
+                            </header>
+                            
+                            <h3 class="rep-main-header">국내 LNG 수입 총량 및 비중 분석 (2025년 결산)</h3>
+                            <p class="rep-sub-header">2025년 총 수입량은 4,672만 톤으로 역대 최대치를 경신했습니다. 민간 직수입 비중이 26%에 도달하며 에너지 수급 구조의 민간 주도 성장이 가속화되고 있습니다.</p>
+                            
+                            <div class="summary-grid">
+                                <div class="summary-card"><span class="summary-label">총 수입량</span><span class="summary-value">4,672만 톤 <span class="trend-up">↗ 0.86%</span></span></div>
+                                <div class="summary-card"><span class="summary-label" style="color:var(--private-orange);">민간 직수입 비중</span><span class="summary-value" style="color:var(--private-orange);">26% <span class="trend-up">↗ 1.7%</span></span></div>
+                                <div class="summary-card"><span class="summary-label">직수입 업체수</span><span class="summary-value">25개사</span></div>
+                                <div class="summary-card"><span class="summary-label">평균 단가 절감액</span><span class="summary-value">-$2.3 /mmbtu</span></div>
+                            </div>
+
+                            <div class="analysis-card">
+                                <h4 style="font-weight:800; font-size:24px; margin-bottom:24px; color:#fff;">📊 수입 주체별 점유율 현황</h4>
+                                <div style="margin-bottom:32px;">
+                                    <div style="display:flex; justify-content:space-between; margin-bottom:12px;"><span style="font-weight:700; color:var(--kogas-blue);">한국가스공사 (KOGAS)</span><span style="font-family:'JetBrains Mono'; font-weight:800;">74% (3,428만 톤)</span></div>
+                                    <div class="p-track"><div class="p-fill-kogas"></div></div>
+                                </div>
+                                <div style="margin-bottom:12px;">
+                                    <div style="display:flex; justify-content:space-between; margin-bottom:12px;"><span style="font-weight:700; color:var(--private-orange);">민간 직수입사 (Private Total)</span><span style="font-family:'JetBrains Mono'; font-weight:800;">26% (1,244만 톤)</span></div>
+                                    <div class="p-track"><div class="p-fill-private"></div></div>
+                                </div>
+                            </div>
+
+                            <div class="rep-section-h3">수입 단가 추이 및 경쟁력 분석 (민간 vs 가스공사)</div>
+                            <table class="rep-table">
+                                <thead><tr><th>구분 (단위: $/mmbtu)</th><th>1분기</th><th>2분기</th><th>3분기</th><th>4분기</th><th>연평균</th></tr></thead>
+                                <tbody>
+                                    <tr><td><b>민간 직수입사 평균</b></td><td>10.2</td><td>9.5</td><td>11.1</td><td>12.4</td><td style="color:var(--vessel-green); font-weight:800;">10.8</td></tr>
+                                    <tr><td><b>한국가스공사 (KOGAS)</b></td><td>12.8</td><td>11.9</td><td>13.5</td><td>14.2</td><td>13.1</td></tr>
+                                    <tr style="background:rgba(0,229,255,0.05);"><td><b>단가 차이 (Gap)</b></td><td style="color:var(--neon-yellow);">-2.6</td><td style="color:var(--neon-yellow);">-2.4</td><td style="color:var(--neon-yellow);">-2.4</td><td style="color:var(--neon-yellow);">-1.8</td><td style="color:var(--neon-yellow); font-weight:800;">-2.3</td></tr>
+                                </tbody>
+                            </table>
+
+                            <div class="rep-section-h3">주요 도입 국가별 비중 (다변화 현황)</div>
+                            <div class="summary-grid" style="grid-template-columns: repeat(2, 1fr);">
+                                <div class="summary-card"><span class="summary-label">1. 오세아니아 (호주 등)</span><span class="summary-value" style="color:var(--neon-cyan);">31% ~ 41%</span><p style="font-size:13px; margin-top:10px; opacity:0.6;">최대 공급 지역 등극 (직수입사 기준 41%)</p></div>
+                                <div class="summary-card"><span class="summary-label">2. 중동 (카타르 등)</span><span class="summary-value">약 24%</span><p style="font-size:13px; margin-top:10px; opacity:0.6;">전통적 주요 공급처, 점유율 안정세 유지</p></div>
+                                <div class="summary-card"><span class="summary-label">3. 동남아시아 (말레이시아 등)</span><span class="summary-value">18% ~ 39%</span><p style="font-size:13px; margin-top:10px; opacity:0.6;">지리적 접근성 우수, 가스공사 도입 비중 높음</p></div>
+                                <div class="summary-card"><span class="summary-label">4. 북미 (미국)</span><span class="summary-value">약 11%</span><p style="font-size:13px; margin-top:10px; opacity:0.6;">헨리 허브 연동 SPA를 통한 가격 변동 헤지</p></div>
+                            </div>
+
+                            <div class="rep-section-h3">민간 직수입 시장 신규 진입 대기 업체 (전체 10개사 리스트)</div>
+                            <table class="rep-table">
+                                <thead><tr><th>업체명</th><th>확보/예정 터미널</th><th>수입 개시</th><th>주요 용도 및 전략</th></tr></thead>
+                                <tbody>
+                                    <tr><td><b>1. (주)한양</b></td><td>전남 묘도 터미널</td><td>2026 하반기</td><td>동북아 LNG 허브 구축 및 발전 사업 연계</td></tr>
+                                    <tr><td><b>2. 한화에너지</b></td><td>통영/울산 터미널</td><td>2026 초</td><td>그룹사 발전소(통영에코파워) 전용 연료 공급</td></tr>
+                                    <tr><td><b>3. 고려아연</b></td><td>울산 에너지터미널(KET)</td><td>2025 말~</td><td>제련 공정 에너지 효율화 및 자가 발전용</td></tr>
+                                    <tr><td><b>4. 현대케미칼</b></td><td>대산 터미널</td><td>2026 중순</td><td>석유화학 공정 연료 및 스팀 생산 원가 절감</td></tr>
+                                    <tr><td><b>5. 동서발전</b></td><td>울산/보령 활용</td><td>2026 예정</td><td>발전공기업 중 두 번째 직수입 추진 (탈 가스공사)</td></tr>
+                                    <tr><td><b>6. 남부발전</b></td><td>자체 터미널 검토</td><td>2027 예정</td><td>가스공사 미수금 리스크 회피 및 독자 도입망 구축</td></tr>
+                                    <tr><td><b>7. 한화솔루션</b></td><td>통영/울산 활용</td><td>2026 예정</td><td>태양광 및 화학 공정 자가발전용 저가 연료 확보</td></tr>
+                                    <tr><td><b>8. 예비 등록사 A</b></td><td>당진 터미널 연계</td><td>2026 하반기</td><td>산업용 자가소비 물량 최적화 (스팟 비중 확대)</td></tr>
+                                    <tr><td><b>9. 예비 등록사 B</b></td><td>광양 터미널 임차</td><td>2027 초</td><td>중소 산업체 연합 도입 물량 (터미널 비즈니스 활용)</td></tr>
+                                    <tr><td><b>10. 예비 등록사 C</b></td><td>보령/묘도 검토</td><td>2027 예정</td><td>신규 LNG 발전소 가동에 따른 독자 수급 체계</td></tr>
+                                </tbody>
+                            </table>
+
+                            <div class="analysis-card" style="margin-top:20px;">
+                                <h4 style="font-weight:800; font-size:22px; margin-bottom:20px; color:var(--neon-cyan);">📍 터미널 인프라 확장 현황</h4>
+                                <ul style="list-style:none; padding:0; display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                                    <li style="padding:15px; background:rgba(255,255,255,0.03); border-radius:8px;"><b>광양 터미널 (포스코):</b> 6호기 완공, 임대 사업 가속화</li>
+                                    <li style="padding:15px; background:rgba(255,255,255,0.03); border-radius:8px;"><b>울산 북항 (KET):</b> 2025말 완공, 고려아연/한화 입주</li>
+                                    <li style="padding:15px; background:rgba(255,255,255,0.03); border-radius:8px;"><b>보령 터미널 (SK+GS):</b> 7~8호기 증설로 효율 극대화</li>
+                                    <li style="padding:15px; background:rgba(255,255,255,0.03); border-radius:8px;"><b>전남 묘도 (한양):</b> 2026 하반기 동북아 허브 구축</li>
+                                </ul>
+                            </div>
+                        </div>`;
+                } else {
+                    content.innerHTML = `
+                        <div class="rep-container">
+                            <h2 class="rep-main-header">대한민국 핵심광물 공급망 분석 리포트</h2>
+                            <p class="rep-sub-header">반도체·이차전지 필수 33종 광물의 특정 국가 의존도 및 산업 안보 리스크 지표 보고서</p>
+                            <div class="summary-grid">
+                                <div class="summary-card"><span class="summary-label">중국 정제 의존 품목</span><span class="summary-value">18종</span></div>
+                                <div class="summary-card"><span class="summary-label">90% 이상 고의존</span><span class="summary-value" style="color:var(--neon-red);">8종</span></div>
+                                <div class="summary-card"><span class="summary-label">안보 우선순위</span><span class="summary-value" style="color:var(--neon-yellow);">URGENT</span></div>
+                                <div class="summary-card"><span class="summary-label">국내 자립 거점</span><span class="summary-value">2개소 (상동, 온산)</span></div>
+                            </div>
+                            <div class="rep-section-h3">전략적 핵심광물 리스크 랭킹 (Selected 13)</div>
+                            <div class="minerals-grid">
+                                <div class="min-card"><span class="min-dep-badge">98%</span><h4>1. 갈륨 (Ga)</h4><p style="font-size:13px; opacity:0.6; margin-top:10px;">차세대 반도체 필수재. 2023년부터 중국 수출 통제 시행 중.</p></div>
+                                <div class="min-card"><span class="min-dep-badge">97%</span><h4>2. 흑연 (Graphite)</h4><p style="font-size:13px; opacity:0.6; margin-top:10px;">이차전지 음극재 핵심 원료. 인조/천연 흑연 모두 대중 의존.</p></div>
+                                <div class="min-card"><span class="min-dep-badge">92%</span><h4>3. 게르마늄 (Ge)</h4><p style="font-size:13px; opacity:0.6; margin-top:10px;">광섬유 및 야간 투시경 렌즈 필수 원료. 수출 통제 품목.</p></div>
+                                <div class="min-card"><span class="min-dep-badge">93%</span><h4>4. 인듐 (In)</h4><p style="font-size:13px; opacity:0.6; margin-top:10px;">LCD/OLED 투명 전극(ITO) 핵심 소재. 대체 불가 공급망.</p></div>
+                                <div class="min-card" style="border-color:var(--neon-cyan);"><span class="min-dep-badge" style="background:var(--kogas-blue); color:#fff;">65%</span><h4>5. 리튬 (Li)</h4><p style="font-size:13px; opacity:0.6; margin-top:10px;">EV 배터리 양극재 핵심 소재. 수입선 다변화 추진 최우선.</p></div>
+                                <div class="min-card"><span class="min-dep-badge">100%</span><h4>6. 비스무트 (Bi)</h4><p style="font-size:13px; opacity:0.6; margin-top:10px;">전량 중국 수입 의존. 반도체 저융점 합금 필수재.</p></div>
+                                <div class="min-card"><span class="min-dep-badge">90%</span><h4>7. 망간 (Mn)</h4><p style="font-size:13px; opacity:0.6; margin-top:10px;">NCM 배터리 필수 원료. 중국 내 제련 비중 압도적.</p></div>
+                                <div class="min-card"><span class="min-dep-badge">60%↑</span><h4>8. 코발트 (Co)</h4><p style="font-size:13px; opacity:0.6; margin-top:10px;">배터리 수명 핵심 소재. 콩고 채굴 → 중국 정제 독점.</p></div>
+                                <div class="min-card"><span class="min-dep-badge">80%↑</span><h4>9. 니켈 (Ni)</h4><p style="font-size:13px; opacity:0.6; margin-top:10px;">고에너지 밀도 배터리 필수. 인도네시아 중국 자본 장악.</p></div>
+                                <div class="min-card"><span class="min-dep-badge">85%</span><h4>10. REE (Nd/Pr)</h4><p style="font-size:13px; opacity:0.6; margin-top:10px;">전기차 모터용 영구자석 원료. 중국 독점 공급망 형성.</p></div>
+                                <div class="min-card"><span class="min-dep-badge">98%↑</span><h4>11. REE (Dy/Tb)</h4><p style="font-size:13px; opacity:0.6; margin-top:10px;">중희토류 고온 안정성 필수. 대체재 확보 매우 어려움.</p></div>
+                                <div class="min-card"><span class="min-dep-badge">80%</span><h4>12. 텅스텐 (W)</h4><p style="font-size:13px; opacity:0.6; margin-top:10px;">절삭공구 및 탄약용 초경합금 핵심. 대중 의존도 높음.</p></div>
+                                <div class="min-card"><span class="min-dep-badge">100%</span><h4>13. 마그네슘 (Mg)</h4><p style="font-size:13px; opacity:0.6; margin-top:10px;">자동차 경량화 알루미늄 합금 필수. 중국 독점 생산.</p></div>
+                            </div>
+                        </div>`;
+                }
+            }
+        };
+
+        window.onClick = (e) => {
+            if (!window.camera || !window.scene) return;
+            const mouse = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
+            const rc = new THREE.Raycaster(); rc.setFromCamera(mouse, window.camera);
+            const hits = rc.intersectObjects([...window.pins, ...window.vesselGroups.map(v => v.group)], true);
+            if (hits.length > 0) {
+                window.clickedTarget = hits[0].object.parent; const data = window.clickedTarget.userData;
+                window.clearArcs(); window.updateLeftPanel(data);
+                if (data.modeType === 'lng' || data.type === 'vessel') { window.createArc(window.clickedTarget.position, window.KOREA_POS, 0xffeb3b, 0.8); }
+                else if (data.modeType === 'mineral') {
+                    if (data.refinedInChina) { window.createArc(window.clickedTarget.position, window.CHINA_POS, 0xaaaaaa, 0.7); window.createArc(window.CHINA_POS, window.KOREA_POS, 0xaaaaaa, 0.7); window.chinaHubMarker.visible = true; }
+                    else { window.createArc(window.clickedTarget.position, window.KOREA_POS, 0xffeb3b, 0.8); }
+                }
+                window.autoRotate = false;
+            } else { 
+                const globeHits = rc.intersectObject(window.globeBody);
+                if (!globeHits.length) { window.clickedTarget = null; window.clearArcs(); window.autoRotate = true; document.getElementById('left-list-panel').classList.remove('active'); }
+            }
+        };
+
+        /**
+         * --- [SECTION 5: 3D ENGINE CORE - 박제 엔진] ---
+         */
+        async function startEngine() {
+            window.scene = new THREE.Scene(); window.camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 1, 4000); window.camera.position.set(0,0,850);
+            window.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); window.renderer.setSize(window.innerWidth, window.innerHeight); window.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); document.body.appendChild(window.renderer.domElement);
+            const tiltAnchor = new THREE.Group(); tiltAnchor.rotation.z = (23.4 * Math.PI) / 180; window.scene.add(tiltAnchor); window.globe = new THREE.Group(); tiltAnchor.add(window.globe);
+            window.globeBody = new THREE.Mesh(new THREE.SphereGeometry(CORE_RADIUS, 128, 128), new THREE.MeshLambertMaterial({ color: 0x091626 }));
+            window.globe.add(window.globeBody);
+
+            // 대기 글로우 (림 글로우 효과)
+            const atmoMat = new THREE.MeshBasicMaterial({ color: 0x0d7a9a, transparent: true, opacity: 0.12, side: THREE.BackSide });
+            window.globe.add(new THREE.Mesh(new THREE.SphereGeometry(CORE_RADIUS * 1.035, 64, 64), atmoMat));
+            
+            const gridMat = new THREE.LineBasicMaterial({ color: 0x1a7a92, transparent: true, opacity: 0.22 });
+            for (let lat = -80; lat <= 80; lat += 10) {
+                const pts = []; for (let lon = -180; lon <= 180; lon += 2) { pts.push(window.latLonToVector3(lat, lon, GRID_RADIUS)); }
+                window.globe.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), gridMat));
+            }
+            for (let lon = -180; lon < 180; lon += 15) {
+                const pts = []; for (let lat = -90; lat <= 90; lat += 2) { pts.push(window.latLonToVector3(lat, lon, GRID_RADIUS)); }
+                window.globe.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), gridMat));
+            }
+            
+            const slider = document.getElementById('rotationSpeedSlider');
+            if (slider) {
+                slider.addEventListener('input', (e) => {
+                    window.rotationSpeed = parseFloat(e.target.value);
+                });
+            }
+
+            window.scene.add(new THREE.AmbientLight(0x6ab4cc, 0.55)); const dLight = new THREE.DirectionalLight(0x88ccdd, 0.5); dLight.position.set(5, 3, 5); window.scene.add(dLight);
+            try {
+                const res = await fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json"), data = await res.json();
+                const worldMesh = topojson.mesh(data, data.objects.countries), lineMat = new THREE.LineBasicMaterial({ color: 0x00c8d4, transparent: true, opacity: 0.7 });
+                worldMesh.coordinates.forEach(lineGroup => { const pts = lineGroup.map(p => window.latLonToVector3(p[1], p[0], MAP_RADIUS)); window.globe.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), lineMat)); });
+                const loaderEl = document.getElementById('loader'); if(loaderEl) loaderEl.style.display = 'none';
+            } catch(e) { console.error(e); }
+
+            window.chinaHubMarker = new THREE.Group(); window.chinaHubMarker.position.copy(window.CHINA_POS);
+            window.chinaHubMarker.add(new THREE.Mesh(new THREE.SphereGeometry(1.8, 16, 16), new THREE.MeshBasicMaterial({ color: 0x888888 })));
+            window.chinaHubMarker.visible = false; window.globe.add(window.chinaHubMarker);
+
+            window.renderCurrentMode(); animate();
+        }
+
+        window.renderCurrentMode = function() {
+            if(!window.globe) return;
+            window.pins.forEach(p => window.globe.remove(p)); window.pins = [];
+            window.vesselGroups.forEach(v => window.globe.remove(v.group)); window.vesselGroups = [];
+            const titleBox = document.getElementById('main-title-text'), ribbon = document.getElementById('dynamic-ribbon');
+
+            if (window.currentMode === 'LNG') {
+                if (titleBox) titleBox.innerHTML = `<div>GLOBAL <span class="accent-text">LNG</span></div><div>MONITORING</div>`;
+                if (ribbon) ribbon.innerHTML = `<div class="info-tag" onmouseenter="window.showLeftList('lng-stats')" onmouseleave="window.hideLeftList()"><div class="info-label">Import Rank</div><div class="info-value">TOP 3 : KOREA</div></div><div class="info-tag" onmouseenter="window.showLeftList('lng-stats')" onmouseleave="window.hideLeftList()"><div class="info-label">Annual Target</div><div class="info-value">46.4M TONNES</div></div><div class="info-tag" onmouseenter="window.showLeftList('lng-stats')" onmouseleave="window.hideLeftList()"><div class="info-label">Main Providers</div><div class="info-value">QATAR/AUS/USA</div></div>`;
+                window.LNG_DATA_MASTER.forEach(s => { const pin = createPin(s, 0xff2d55, 'lng'); window.globe.add(pin); window.pins.push(pin); });
+                const vTex = window.createGlowTexture('#00ff88');
+                window.VESSEL_DATA.forEach(r => {
+                    const vGroup = new THREE.Group(); vGroup.add(new THREE.Mesh(new THREE.SphereGeometry(0.8, 8, 8), new THREE.MeshBasicMaterial({ color: 0x00ff88 })));
+                    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: vTex, color: 0x00ff88, transparent: true, blending: THREE.AdditiveBlending }));
+                    sprite.scale.set(12, 12, 1); vGroup.add(sprite);
+                    const vWaypoints = r.route.map(p => window.latLonToVector3(p[0], p[1], VESSEL_RADIUS));
+                    const vObj = { group: vGroup, vWaypoints, progress: Math.random(), speed: 0.00015, name: r.name, glow: sprite, modeType: 'lng', type: 'vessel' };
+                    vGroup.userData = vObj; window.globe.add(vGroup); window.vesselGroups.push(vObj);
+                });
+            } else {
+                if (titleBox) titleBox.innerHTML = `<div>CRITICAL <span class="accent-text">MINERALS</span></div><div>MONITORING</div>`;
+                if (ribbon) ribbon.innerHTML = `<div class="info-tag" onmouseenter="window.showLeftList('strategic')" onmouseleave="window.hideLeftList()"><div class="info-label">Key Strategic</div><div class="info-value">10 Major Minerals</div></div><div class="info-tag" onmouseenter="window.showLeftList('security')" onmouseleave="window.hideLeftList()"><div class="info-label">Security Focus</div><div class="info-value">23 Major Items</div></div>`;
+                window.MINERALS_MASTER_DATA.forEach(s => { const group = createPin(s, s.type === 'strategic' ? 0xffeb3b : 0xff2d55, 'mineral'); window.globe.add(group); window.pins.push(group); });
+            }
+        };
+
+        function createPin(data, color, modeType) {
+            const group = new THREE.Group(); group.position.copy(window.latLonToVector3(data.lat, data.lon, MARKER_RADIUS));
+            group.userData = { ...data, modeType, pulse: Math.random()*Math.PI };
+            group.add(new THREE.Mesh(new THREE.SphereGeometry(1.6, 16, 16), new THREE.MeshBasicMaterial({ color: color })));
+            const ring = new THREE.Mesh(new THREE.RingGeometry(2.5, 4.5, 32), new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.4, side: THREE.DoubleSide }));
+            ring.lookAt(0,0,0); group.add(ring); return group;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate); const now = Date.now();
+            if (window.autoRotate && !window.isDragging) { window.globe.rotation.y += window.rotationSpeed; window.globe.rotation.x = THREE.MathUtils.lerp(window.globe.rotation.x, 0, 0.05); }
+            window.pins.forEach(p => { if(p.userData) { p.userData.pulse += 0.04; const s = 1 + Math.sin(p.userData.pulse) * 0.3; p.children[1].scale.set(s, s, 1); } });
+            if (window.vesselGroups && window.vesselGroups.length > 0) {
+                window.vesselGroups.forEach(v => {
+                    v.progress += v.speed; if (v.progress > 1) v.progress = 0;
+                    const segs = v.vWaypoints.length - 1; const scaled = v.progress * segs; const idx = Math.min(Math.floor(scaled), segs - 1);
+                    v.group.position.copy(window.GreatCircleInterpolation(v.vWaypoints[idx], v.vWaypoints[idx+1], scaled - idx));
+                    const pulse = 1.0 + Math.sin(now * 0.005) * 0.2; v.glow.scale.set(12 * pulse, 12 * pulse, 1);
+                });
+            }
+            if (window.clickedTarget && window.clickedTarget.userData && window.clickedTarget.userData.lat) {
+                const dist = window.calculateDist(window.clickedTarget.userData, { lat: KOREA_LAT, lon: KOREA_LON });
+                const mid = window.GreatCircleInterpolation(window.clickedTarget.position, window.KOREA_POS, 0.5).setLength(MARKER_RADIUS + 25);
+                const midW = mid.applyMatrix4(window.globe.matrixWorld); const midSp = midW.project(window.camera);
+                const dB = document.getElementById('distanceBadge');
+                if (midW.normalize().dot(window.camera.position.clone().normalize()) > 0.05) { if(dB) { dB.innerText = `${Math.round(dist).toLocaleString()} KM`; dB.className = 'distance-badge active'; dB.style.left = (midSp.x + 1) * window.innerWidth/2 + 'px'; dB.style.top = -(midSp.y - 1) * window.innerHeight/2 + 'px'; } }
+                else { if(dB) dB.classList.remove('active'); }
+            } else { const dB = document.getElementById('distanceBadge'); if(dB) dB.classList.remove('active'); }
+            if(window.renderer && window.scene && window.camera) window.renderer.render(window.scene, window.camera);
+        }
+
+        window.onload = function() { startEngine().catch(function(e) { console.error('startEngine error:', e); }); };
+        document.addEventListener('click', (e) => window.onClick(e));
+        document.addEventListener('mousedown', (e) => { window.isDragging = true; window.previousPos = { x: e.clientX, y: e.clientY }; });
+        document.addEventListener('mouseup', () => window.isDragging = false);
+        document.addEventListener('mousemove', (e) => {
+            if (window.isDragging) { window.globe.rotation.y += (e.clientX - window.previousPos.x) * 0.005; window.globe.rotation.x += (e.clientY - window.previousPos.y) * 0.005; window.previousPos = { x: e.clientX, y: e.clientY }; window.autoRotate = false; }
+            if(window.camera) {
+                const mouse = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
+                const rc = new THREE.Raycaster(); rc.setFromCamera(mouse, window.camera);
+                const hits = rc.intersectObjects([...window.pins, ...window.vesselGroups.map(v => v.group)], true);
+                document.body.style.cursor = hits.length > 0 ? 'pointer' : 'default';
+            }
+        });
+        window.addEventListener('wheel', (e) => { if(window.camera) window.camera.position.z = Math.min(Math.max(camera.position.z + e.deltaY * 0.5, 300), 1600); }, { passive: false });
+        window.addEventListener('resize', () => { if(window.camera && window.renderer) { window.camera.aspect = window.innerWidth / window.innerHeight; window.camera.updateProjectionMatrix(); window.renderer.setSize(window.innerWidth, window.innerHeight); } });
+
+        // --- [하단 바 wrap 감지 + 팝업 활성 시 컨트롤 숨김 & 버튼 위치 조정] ---
+        (function() {
+            function getNavBottomOffset() {
+                // CSS: clamp(110px, 17vh, 185px)
+                return Math.max(110, Math.min(185, window.innerHeight * 0.17));
+            }
+
+            function updateBottomLayout() {
+                var bar = document.getElementById('bottom-bar');
+                var nav = document.getElementById('main-nav-container');
+                var overlay = document.getElementById('ui-overlay');
+                var panel = document.getElementById('left-list-panel');
+                if (!bar || !nav) return;
+
+                var panelActive = panel && panel.classList.contains('active');
+
+                if (panelActive) {
+                    // 컨트롤 박스 화면 밖으로
+                    if (overlay) overlay.style.display = 'none';
+                    // wrap 중앙 정렬 해제
+                    bar.classList.remove('wrapped');
+                    // 버튼 그룹 상단이 팝업 하단 바로 아래에 오도록 위치 계산
+                    var navBottomOffset = getNavBottomOffset();
+                    var navH = nav.offsetHeight;
+                    var newBottom = Math.max(4, navBottomOffset - navH - 6);
+                    bar.style.bottom = newBottom + 'px';
+                } else {
+                    // 컨트롤 박스 복원 (리포트가 열려있으면 유지)
+                    if (overlay && !window.activeReport) overlay.style.display = '';
+                    bar.style.bottom = '';
+                    // wrap 감지 재적용
+                    var isWrapped = bar.offsetHeight > nav.offsetHeight * 1.25;
+                    if (isWrapped) { bar.classList.add('wrapped'); } else { bar.classList.remove('wrapped'); }
+                }
+
+                // 지구본 중심 항상 화면 정중앙 유지
+                if (window.camera) window.camera.position.y = 0;
+            }
+
+            // 팝업 active 클래스 변화 감지
+            var panel = document.getElementById('left-list-panel');
+            if (panel && typeof MutationObserver !== 'undefined') {
+                new MutationObserver(updateBottomLayout).observe(panel, { attributes: true, attributeFilter: ['class'] });
+            }
+            // bottom-bar 크기 변화 감지
+            if (typeof ResizeObserver !== 'undefined') {
+                var bar = document.getElementById('bottom-bar');
+                if (bar) new ResizeObserver(updateBottomLayout).observe(bar);
+            }
+            window.addEventListener('resize', updateBottomLayout);
+            setTimeout(updateBottomLayout, 1500);
+        })();
+    </script>
+</body>
+</html>
