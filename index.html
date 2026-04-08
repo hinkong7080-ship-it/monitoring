@@ -276,6 +276,33 @@
             const lp = document.getElementById('left-list-panel'); if(lp) lp.classList.remove('active');
         };
 
+        // --- 자동 전환 로직 ---
+        window._autoSwitchTimer = null;
+        window.startAutoSwitch = function() {
+            window.stopAutoSwitch();
+            const input = document.getElementById('loopIntervalInput');
+            const minutes = parseFloat(input ? input.value : 5) || 5;
+            if (minutes <= 0) return;
+            window._autoSwitchTimer = setInterval(function() {
+                if (window.activeReport) return; // 리포트 열려있으면 건너뜀
+                const next = window.currentMode === 'LNG' ? 'MINERALS' : 'LNG';
+                window.setMode(next);
+            }, minutes * 60 * 1000);
+        };
+        window.stopAutoSwitch = function() {
+            if (window._autoSwitchTimer) { clearInterval(window._autoSwitchTimer); window._autoSwitchTimer = null; }
+        };
+        // 입력값 변경 시 즉시 재시작
+        (function() {
+            const input = document.getElementById('loopIntervalInput');
+            if (input) {
+                input.addEventListener('change', function() { window.startAutoSwitch(); });
+                input.addEventListener('input', function() { window.startAutoSwitch(); });
+            }
+        })();
+        // 페이지 로드 후 자동 시작
+        setTimeout(function() { window.startAutoSwitch(); }, 2000);
+
         window.showLeftList = (type) => {
             const panel = document.getElementById('left-list-panel'), title = document.getElementById('list-title'), content = document.getElementById('list-content');
             if(!panel || !title || !content) return;
