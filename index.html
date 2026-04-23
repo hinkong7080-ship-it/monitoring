@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ILDAE GIUP Corp-Global Resource Monitor - Master V133.00</title>
+    <title>Unified Global Resource Monitor - Master V133.00</title>
     <!-- [External Libraries - Protected Version] -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
@@ -17,8 +17,8 @@
         :root {
             --neon-yellow: #ffeb3b; --neon-red: #ff2d55; --neon-cyan: #00e5ff;
             --korea-blue: #2979ff; --china-grey: #aaaaaa; --vessel-green: #00ff88;
-            --war-red: #ff0000; --custom-bg: #060c18; --panel-bg: rgba(6, 14, 28, 0.93);
-            --report-dark-bg: #050c18; --private-orange: #f97316; --kogas-blue: #2563eb;
+            --war-red: #ff0000; --custom-bg: #d3edfb; --panel-bg: rgba(10, 28, 55, 0.93);
+            --report-dark-bg: #0d1e38; --private-orange: #f97316; --kogas-blue: #2563eb;
 
             /* --- 반응형 레이아웃 변수 --- */
             --ui-margin: clamp(16px, 2.5vw, 40px);
@@ -40,8 +40,8 @@
         }
         body {
             margin: 0; padding: 0; overflow: hidden; background-color: var(--custom-bg);
-            background-image: linear-gradient(rgba(20, 90, 130, 0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(20, 90, 130, 0.07) 1px, transparent 1px);
-            background-size: 50px 50px; font-family: 'Urbanist', 'Noto Sans KR', sans-serif; color: #ffffff; user-select: none;
+            background-image: linear-gradient(rgba(0, 80, 160, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 80, 160, 0.1) 1px, transparent 1px);
+            background-size: 50px 50px; font-family: 'Urbanist', 'Noto Sans KR', sans-serif; color: #0d1e38; user-select: none;
         }
 
         #bottom-bar { position: absolute; bottom: var(--ui-margin); left: var(--ui-margin); right: var(--ui-margin); display: flex; flex-wrap: wrap; align-items: flex-end; z-index: 9999; pointer-events: none; }
@@ -49,40 +49,41 @@
         #main-nav-container { display: flex; flex-direction: column; gap: var(--nav-gap); pointer-events: auto; }
         .tab-group { display: grid; grid-template-columns: 1fr 1fr; gap: var(--nav-gap); width: var(--nav-width); }
         .switch-btn {
-            background: rgba(0, 0, 0, 0.85); border: 2.5px solid var(--neon-cyan); color: var(--neon-cyan);
+            background: rgba(10, 30, 60, 0.88); border: 2.5px solid #007acc; color: #00d4ff;
             padding: var(--btn-padding) 0; border-radius: 4px; cursor: pointer; font-weight: 800; font-size: var(--btn-font);
             text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s ease; backdrop-filter: blur(15px); text-align: center;
         }
-        .switch-btn:hover { background: rgba(0, 229, 255, 0.2); transform: translateY(-2px); }
-        .switch-btn.active { background: var(--neon-cyan); color: #000; box-shadow: 0 0 25px rgba(0, 229, 255, 0.6); }
+        .switch-btn:hover { background: rgba(0, 100, 180, 0.55); transform: translateY(-2px); }
+        .switch-btn.active { background: #007acc; color: #fff; box-shadow: 0 0 22px rgba(0, 122, 204, 0.5); }
 
         /* [좌측 상세 정보 패널] */
         #left-list-panel {
             position: absolute; left: var(--ui-margin); bottom: var(--nav-bottom-offset);
             height: auto; max-height: calc(100vh - 45vh); width: var(--nav-width); box-sizing: border-box;
-            background: var(--panel-bg); border: 1.5px solid var(--neon-cyan);
+            background: var(--panel-bg); border: 1.5px solid rgba(0, 122, 204, 0.7);
             border-radius: 4px; padding: var(--panel-padding); opacity: 0; visibility: hidden;
             transition: 0.4s cubic-bezier(0.16, 1, 0.3, 1); z-index: 500; backdrop-filter: blur(35px);
-            display: flex; flex-direction: column; box-shadow: 0 0 50px rgba(0, 229, 255, 0.2);
+            display: flex; flex-direction: column; box-shadow: 0 8px 40px rgba(0, 60, 120, 0.18);
         }
         #left-list-panel.active { opacity: 1; visibility: visible; }
-        .list-title { font-weight: 800; font-size: var(--list-title-font); color: var(--neon-cyan); margin-bottom: clamp(10px, 1vw, 20px); border-bottom: 1px solid rgba(0,229,255,0.3); padding-bottom: clamp(6px, 0.63vw, 12px); text-transform: uppercase; }
+        .list-title { font-weight: 800; font-size: var(--list-title-font); color: #00d4ff; margin-bottom: clamp(10px, 1vw, 20px); border-bottom: 1px solid rgba(0,180,255,0.3); padding-bottom: clamp(6px, 0.63vw, 12px); text-transform: uppercase; }
         .list-content { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(5px, 0.52vw, 10px); overflow-y: auto; flex-grow: 1; padding-right: clamp(6px, 0.78vw, 15px); }
         .list-content::-webkit-scrollbar { width: 4px; }
-        .list-content::-webkit-scrollbar-thumb { background: var(--neon-cyan); border-radius: 2px; }
-        .list-item { font-size: var(--list-item-font); color: rgba(255, 255, 255, 0.95); line-height: 1.6; display: flex; align-items: flex-start; }
-        .list-item::before { content: '• '; color: var(--neon-cyan); margin-right: 8px; flex-shrink: 0; }
+        .list-content::-webkit-scrollbar-thumb { background: #007acc; border-radius: 2px; }
+        .list-item { font-size: var(--list-item-font); color: rgba(220, 235, 255, 0.95); line-height: 1.6; display: flex; align-items: flex-start; }
+        .list-item::before { content: '• '; color: #00d4ff; margin-right: 8px; flex-shrink: 0; }
 
         /* [Header KPI Ribbon] */
         #header-main-title { position: absolute; top: var(--ui-margin); left: var(--ui-margin); right: var(--ui-margin); z-index: 1800; display: flex; align-items: center; pointer-events: none; }
         #header-main-title .text-group { font-weight: 700; font-size: clamp(1.1rem, 2.2vw, 3.2rem); letter-spacing: -1px; margin-right: 3vw; line-height: 1.05; }
-        .accent-text { color: var(--neon-cyan); text-shadow: 0 0 20px rgba(0, 229, 255, 0.5); }
-        .header-info-ribbon { display: flex; align-items: center; justify-content: space-around; flex-grow: 1; border-left: 4.5px solid rgba(255, 255, 255, 0.15); padding-left: 1.5vw; height: var(--ribbon-height); pointer-events: auto; }
+        .accent-text { color: #007acc; text-shadow: 0 0 18px rgba(0, 122, 204, 0.35); }
+        #header-main-title .text-group { color: #0d1e38; }
+        .header-info-ribbon { display: flex; align-items: center; justify-content: space-around; flex-grow: 1; border-left: 4.5px solid rgba(0, 40, 80, 0.18); padding-left: 1.5vw; height: var(--ribbon-height); pointer-events: auto; }
         .info-tag { display: flex; flex-direction: column; gap: 4px; flex: 1; padding-left: 2vw; position: relative; cursor: help; transition: 0.3s; }
-        .info-tag:hover { background: rgba(0, 229, 255, 0.05); }
-        .info-tag:not(:last-child)::after { content: ''; position: absolute; right: 0; top: 10%; height: 80%; width: 1.5px; background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.25), transparent); }
-        .info-label { font-size: var(--info-label-font); letter-spacing: 2px; text-transform: uppercase; color: var(--neon-cyan); font-weight: 500; }
-        .info-value { font-size: var(--info-value-font); font-weight: 700; font-family: 'JetBrains Mono'; }
+        .info-tag:hover { background: rgba(0, 122, 204, 0.06); }
+        .info-tag:not(:last-child)::after { content: ''; position: absolute; right: 0; top: 10%; height: 80%; width: 1.5px; background: linear-gradient(to bottom, transparent, rgba(0, 40, 80, 0.2), transparent); }
+        .info-label { font-size: var(--info-label-font); letter-spacing: 2px; text-transform: uppercase; color: #007acc; font-weight: 500; }
+        .info-value { font-size: var(--info-value-font); font-weight: 700; font-family: 'JetBrains Mono'; color: #0d1e38; }
 
         /* [Report Overlay Shell - Neon Dark] */
         #report-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--report-dark-bg); z-index: 2000; display: none; overflow-y: auto; color: #ffffff; }
@@ -114,14 +115,14 @@
         .min-dep-badge { font-size: clamp(9px, 0.63vw, 12px); font-weight: 800; padding: 5px 12px; border-radius: 4px; position: absolute; top: clamp(12px, 1.3vw, 25px); right: clamp(12px, 1.3vw, 25px); background: var(--war-red); color: #fff; box-shadow: 0 0 15px rgba(255, 45, 85, 0.5); }
 
         #ui-overlay { margin-left: auto; text-align: right; pointer-events: none; }
-        .controls { background: var(--panel-bg); padding: var(--controls-padding); border-radius: 4px; width: var(--controls-width); box-sizing: border-box; border: 1px solid rgba(0, 229, 255, 0.15); pointer-events: auto; backdrop-filter: blur(10px); margin-left: auto; }
-        .corp-brand { font-size: var(--controls-font); font-weight: 800; border-bottom: 1.5px solid rgba(255, 255, 255, 0.15); padding-bottom: clamp(6px, 0.63vw, 12px); margin-bottom: clamp(8px, 0.78vw, 15px); letter-spacing: 1px; }
-        .controls span { font-size: clamp(10px, 0.73vw, 14px); }
+        .controls { background: var(--panel-bg); padding: var(--controls-padding); border-radius: 4px; width: var(--controls-width); box-sizing: border-box; border: 1px solid rgba(0, 122, 204, 0.4); pointer-events: auto; backdrop-filter: blur(10px); margin-left: auto; box-shadow: 0 8px 32px rgba(0, 60, 120, 0.18); }
+        .corp-brand { font-size: var(--controls-font); font-weight: 800; color: #fff; border-bottom: 1.5px solid rgba(255, 255, 255, 0.15); padding-bottom: clamp(6px, 0.63vw, 12px); margin-bottom: clamp(8px, 0.78vw, 15px); letter-spacing: 1px; }
+        .controls span { font-size: clamp(10px, 0.73vw, 14px); color: rgba(200, 225, 255, 0.9); }
         input[type=number], input[type=range] { pointer-events: auto; accent-color: var(--neon-cyan); cursor: pointer; }
 
         .distance-badge { position: absolute; background: rgba(0, 0, 0, 0.95); padding: clamp(5px, 0.42vw, 8px) clamp(8px, 0.83vw, 16px); border-radius: 4px; font-size: clamp(10px, 0.83vw, 16px); color: var(--neon-yellow); border: 1.5px solid var(--neon-yellow); transform: translate(-50%, -100%); pointer-events: none; opacity: 0; visibility: hidden; transition: 0.3s; z-index: 205; font-weight: 800; backdrop-filter: blur(10px); }
         .distance-badge.active { opacity: 1; visibility: visible; }
-        #loader { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 8000; letter-spacing: clamp(4px, 0.52vw, 10px); font-size: clamp(10px, 0.83vw, 16px); color: var(--neon-cyan); font-weight: 200; }
+        #loader { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 8000; letter-spacing: clamp(4px, 0.52vw, 10px); font-size: clamp(10px, 0.83vw, 16px); color: #007acc; font-weight: 200; }
     </style>
 </head>
 <body>
@@ -147,7 +148,7 @@
         </div>
         <div id="ui-overlay">
             <div class="controls">
-                <div class="corp-brand"><span class="accent-text">ILDAE GIUP Corp</span></div>
+                <div class="corp-brand">ILDAE GIUP Corp</div>
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;"><span>자동 전환 (분)</span><input type="number" id="loopIntervalInput" value="5" min="1" max="60"></div>
                 <div style="display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px; margin-bottom:15px;"><span style="white-space:nowrap; flex-shrink:0;">자전 속도</span><input type="range" id="rotationSpeedSlider" min="0" max="0.01" step="0.0001" value="0.0006" style="flex:1; min-width:70px;"></div>
             </div>
@@ -159,6 +160,7 @@
          * --- [SECTION 2: GLOBAL CORE & UTILITIES - 제1원칙: 수정 불가 박제] ---
          */
         const CORE_RADIUS = 126, MARKER_RADIUS = 135.2, VESSEL_RADIUS = 136.5, MAP_RADIUS = 133.5, GRID_RADIUS = 129, ARC_BASE_RADIUS = 135.2;
+        const INIT_CAMERA_Z = 850; // 초기 지구본 크기 고정값 — 변경 금지
         const KOREA_LAT = 36.5, KOREA_LON = 127.8, CHINA_LAT = 35.0, CHINA_LON = 105.0;
 
         window.wps = { hormuz: [26, 56.5], malacca: [1.3, 103.5], panama: [9, -79], bering: [66, -169], singapore: [1.2, 103.8], sChinaSea: [15, 115], babElMandeb: [12.6, 43.4] };
@@ -479,18 +481,19 @@
         /**
          * --- [SECTION 5: 3D ENGINE CORE - 박제 엔진] ---
          */
+        window._userHasZoomed = false; // 사용자가 직접 줌하기 전까지 초기 z 유지
         async function startEngine() {
-            window.scene = new THREE.Scene(); window.camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 1, 4000); window.camera.position.set(0,0,850);
+            window.scene = new THREE.Scene(); window.camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 1, 4000); window.camera.position.set(0, 0, INIT_CAMERA_Z);
             window.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); window.renderer.setSize(window.innerWidth, window.innerHeight); window.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); document.body.appendChild(window.renderer.domElement);
             const tiltAnchor = new THREE.Group(); tiltAnchor.rotation.z = (23.4 * Math.PI) / 180; window.scene.add(tiltAnchor); window.globe = new THREE.Group(); tiltAnchor.add(window.globe);
-            window.globeBody = new THREE.Mesh(new THREE.SphereGeometry(CORE_RADIUS, 128, 128), new THREE.MeshLambertMaterial({ color: 0x091626 }));
+            window.globeBody = new THREE.Mesh(new THREE.SphereGeometry(CORE_RADIUS, 128, 128), new THREE.MeshLambertMaterial({ color: 0x2a7fba }));
             window.globe.add(window.globeBody);
 
             // 대기 글로우 (림 글로우 효과)
-            const atmoMat = new THREE.MeshBasicMaterial({ color: 0x0d7a9a, transparent: true, opacity: 0.12, side: THREE.BackSide });
-            window.globe.add(new THREE.Mesh(new THREE.SphereGeometry(CORE_RADIUS * 1.035, 64, 64), atmoMat));
+            const atmoMat = new THREE.MeshBasicMaterial({ color: 0x3a90c0, transparent: true, opacity: 0.13, side: THREE.BackSide });
+            window.globe.add(new THREE.Mesh(new THREE.SphereGeometry(CORE_RADIUS * 1.018, 64, 64), atmoMat));
             
-            const gridMat = new THREE.LineBasicMaterial({ color: 0x1a7a92, transparent: true, opacity: 0.22 });
+            const gridMat = new THREE.LineBasicMaterial({ color: 0x8ad8f5, transparent: true, opacity: 0.38 });
             for (let lat = -80; lat <= 80; lat += 10) {
                 const pts = []; for (let lon = -180; lon <= 180; lon += 2) { pts.push(window.latLonToVector3(lat, lon, GRID_RADIUS)); }
                 window.globe.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), gridMat));
@@ -507,11 +510,21 @@
                 });
             }
 
-            window.scene.add(new THREE.AmbientLight(0x6ab4cc, 0.55)); const dLight = new THREE.DirectionalLight(0x88ccdd, 0.5); dLight.position.set(5, 3, 5); window.scene.add(dLight);
+            window.scene.add(new THREE.AmbientLight(0xffffff, 0.85)); const dLight = new THREE.DirectionalLight(0xd0ecff, 0.65); dLight.position.set(5, 3, 5); window.scene.add(dLight);
             try {
-                const res = await fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json"), data = await res.json();
-                const worldMesh = topojson.mesh(data, data.objects.countries), lineMat = new THREE.LineBasicMaterial({ color: 0x00c8d4, transparent: true, opacity: 0.7 });
-                worldMesh.coordinates.forEach(lineGroup => { const pts = lineGroup.map(p => window.latLonToVector3(p[1], p[0], MAP_RADIUS)); window.globe.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), lineMat)); });
+                const res = await fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json"), data = await res.json();
+                const countries = topojson.feature(data, data.objects.countries);
+                const lineMat = new THREE.LineBasicMaterial({ color: 0xe0f5ff, transparent: true, opacity: 0.9 });
+                countries.features.forEach(feature => {
+                    const geom = feature.geometry;
+                    const polys = geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates;
+                    polys.forEach(poly => {
+                        poly.forEach(ring => {
+                            const pts = ring.map(p => window.latLonToVector3(p[1], p[0], MAP_RADIUS));
+                            if (pts.length > 1) window.globe.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), lineMat));
+                        });
+                    });
+                });
                 const loaderEl = document.getElementById('loader'); if(loaderEl) loaderEl.style.display = 'none';
             } catch(e) { console.error(e); }
 
@@ -579,7 +592,7 @@
             if(window.renderer && window.scene && window.camera) window.renderer.render(window.scene, window.camera);
         }
 
-        window.onload = function() { startEngine().catch(function(e) { console.error('startEngine error:', e); }); };
+        window.onload = function() { setTimeout(function() { startEngine().catch(function(e) { console.error('startEngine error:', e); }); }, 100); };
         document.addEventListener('click', (e) => window.onClick(e));
         document.addEventListener('mousedown', (e) => { window.isDragging = true; window.previousPos = { x: e.clientX, y: e.clientY }; });
         document.addEventListener('mouseup', () => window.isDragging = false);
@@ -592,8 +605,8 @@
                 document.body.style.cursor = hits.length > 0 ? 'pointer' : 'default';
             }
         });
-        window.addEventListener('wheel', (e) => { if(window.camera) window.camera.position.z = Math.min(Math.max(camera.position.z + e.deltaY * 0.5, 300), 1600); }, { passive: false });
-        window.addEventListener('resize', () => { if(window.camera && window.renderer) { window.camera.aspect = window.innerWidth / window.innerHeight; window.camera.updateProjectionMatrix(); window.renderer.setSize(window.innerWidth, window.innerHeight); } });
+        window.addEventListener('wheel', (e) => { if(window.camera) { window._userHasZoomed = true; window.camera.position.z = Math.min(Math.max(camera.position.z + e.deltaY * 0.5, 300), 1600); } }, { passive: false });
+        window.addEventListener('resize', () => { if(window.camera && window.renderer) { window.camera.aspect = window.innerWidth / window.innerHeight; window.camera.updateProjectionMatrix(); window.renderer.setSize(window.innerWidth, window.innerHeight); if (!window._userHasZoomed) window.camera.position.z = INIT_CAMERA_Z; } });
 
         // --- [하단 바 wrap 감지 + 팝업 활성 시 컨트롤 숨김 & 버튼 위치 조정] ---
         (function() {
